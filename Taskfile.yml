@@ -1,0 +1,40 @@
+version: "3"
+
+vars:
+  CONTAINER_NAME: unit_python_demo
+  CONTAINER_IMAGE: unit-python-demo:latest
+
+tasks:
+  build:
+    desc: Build the Unit Python image
+    cmds:
+      - docker build -t {{.CONTAINER_IMAGE}} .
+  run:
+    desc: Run the Python application
+    cmds:
+      - docker run -d --mount type=bind,src="$(pwd)/config/",dst=/docker-entrypoint.d/ --mount type=bind,src="$(pwd)/log/unit.log",dst=/var/log/unit.log --mount type=bind,src="$(pwd)/state",dst=/var/lib/unit --mount type=bind,src="$(pwd)/webapp",dst=/www -p 8080:8080 --name {{.CONTAINER_NAME}} {{.CONTAINER_IMAGE}}
+  restart:
+    desc: Restart Python application's container 
+    cmds:
+      - docker restart {{.CONTAINER_NAME}}
+  
+  remove:
+    desc: Remove the Python application's container
+    cmds:
+      - docker stop {{.CONTAINER_NAME}}
+      - docker rm {{.CONTAINER_NAME}}
+    
+  test:
+    desc: Test the Python application
+    cmds:
+      - curl -X GET localhost:8080
+
+  get_config:
+    desc: Get Unit configuration
+    cmds:
+      - docker exec -ti {{.CONTAINER_NAME}} curl -X GET --unix-socket /var/run/control.unit.sock http://localhost/config
+  
+  load_config:
+    desc: Load Unit configuration
+    cmds:
+      - docker exec -ti {{.CONTAINER_NAME}} curl -X PUT --data-binary @/docker-entrypoint.d/config.json --unix-socket /var/run/control.unit.sock http://localhost/config
